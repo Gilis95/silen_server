@@ -1,2 +1,9 @@
 #Files created by QT 
 *.autosave
+/Default/
+#Eclipse generated files
+.cproject
+.project
+.settings/
+#Temporary QT files
+silen_server.pro.user.*

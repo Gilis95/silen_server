@@ -3,4 +3,9 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
-SOURCES += main.c
+SOURCES += src/main.c \
+    src/hashmap.c \
+
+HEADERS += \
+    src/headers/hashmap.h \
+    src/headers/person.h
