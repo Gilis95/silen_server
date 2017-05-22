@@ -10,7 +10,7 @@
 #include "src/headers/person.h"
 #include "src/headers/communication_header.h"
 
-HASHMAP_FUNCS_CREATE(people, const char, person);
+HASHMAP_FUNCS_CREATE(people, const char, struct person);
 
 #define STOP 666
 #define INSERT_PERSON 2
@@ -59,7 +59,7 @@ int main(void)
             perror("msgcrv failed with error");
             exit(EXIT_FAILURE);
         }
-        printf("INFO: %s\n", operations[generic_messages.my_msg_type]);
+//        printf("INFO: %s\n", operations[generic_messages.my_msg_type]);
 
         switch (generic_messages.my_msg_type) {
         case LIST:
@@ -87,6 +87,7 @@ int main(void)
                 printf("INFO: %s\n","Unable to send information back to client(aka. Eba sa u gyzo)");
                 break;
             }
+            sleep(1);
             break;
         case INSERT_PERSON:
             /* Read send from client message */
@@ -145,13 +146,14 @@ void kill_person(const char *key){
         if(!p->killed){
             p->killed = 1;
 
-            fprintf(stderr,"INFO: Person with name %s is death", p->name);
+            fprintf(stderr,"INFO: Person with name %s is dead\n", p->name);
         }
     }
 }
 
 void give_birth(person *person){
     people_hashmap_put(&family_tree,person->pin,person);
+    printf("INFO: Person with name %s has been born.", person->name);
 }
 
 void intializeTree(){
