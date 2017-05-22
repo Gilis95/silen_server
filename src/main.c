@@ -181,11 +181,11 @@ void intializeTree(){
         p = (person*) malloc(sizeof(person));
 
         /* Delete all unnecessary characters */
-        memset(p.name,0,sizeof(p.name));
-        memset(p.date_of_birth,0,sizeof(p.date_of_birth));
-        memset(p.parent_PIN[1],0, sizeof(p.parent_PIN[1]));
-        memset(p.parent_PIN[0],0, sizeof(p.parent_PIN[0]));
-        memset(p.pin,0, sizeof(p.pin));
+        memset(p->name,0,sizeof(p->name));
+        memset(p->date_of_birth,0,sizeof(p->date_of_birth));
+        memset(p->parent_PIN[1],0, sizeof(p->parent_PIN[1]));
+        memset(p->parent_PIN[0],0, sizeof(p->parent_PIN[0]));
+        memset(p->pin,0, sizeof(p->pin));
 
         strcpy(p->name, ime[i]);
         strcpy(p->date_of_birth, date_of_birth[i%5]);
