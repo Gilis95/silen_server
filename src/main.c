@@ -8,32 +8,16 @@
 #include <sys/msg.h>
 #include "headers/hashmap.h"
 #include "src/headers/person.h"
+#include "src/headers/communication_header.h"
 
 HASHMAP_FUNCS_CREATE(people, const char, person);
 
-#define STOP 0
-#define INSERT_PERSON 1
-#define KILL_PERSON 2
+#define STOP 666
+#define INSERT_PERSON 2
+#define KILL_PERSON 3
+
 
 struct hashmap family_tree;
-
-/* Message used for inserting new person into tree */
-typedef struct insert_person_message {
-    long int my_msg_type;
-    person person;
-}insert_person_msg;
-
-/* Message used for killing person with PIN */
-typedef struct kill_person_message{
-    long int my_msg_type;
-    char pin[10];
-}kill_person_msg;
-
-/* Message specifying next operation */
-typedef struct generic_message{
-    long int my_msg_type;
-    char operation[1];
-}generic_msg;
 
 
 int main(void)
@@ -44,11 +28,11 @@ int main(void)
     int running = 1;
     int msgid;
     generic_msg generic_messages;
-    insert_person_msg insert_person_message;
+    person_msg person_message;
     kill_person_msg kill_person_message;
+    struct hashmap_iter *iter;
 
     long int msg_to_recieve = 0;
-
 
     char* operations[3]={
         "Stop server",
@@ -57,7 +41,7 @@ int main(void)
     };
 
     /* Let us set up the message queue */
-    msgid = msgget(ftok("pesho",(key_t)1234), 0600| IPC_EXCL | IPC_CREAT);
+    msgid = msgget(ftok("dqvola",(key_t)666), 0660| IPC_EXCL | IPC_CREAT);
 
     if (msgid == -1) {
         perror("msgget failed with error");
@@ -67,34 +51,61 @@ int main(void)
     /* Then the messages are retrieved from the queue, until an end message is
      * encountered. lastly the message queue is deleted
      */
-
+    fprintf(stderr,"INFO: Server has started.\n");
     while(running) {
-        fprintf(stderr,"INFO: Server has started.");
         /* Read operation which has to be executed */
         if (msgrcv(msgid, &generic_messages, sizeof(generic_msg),
                    msg_to_recieve, 0) == -1) {
             perror("msgcrv failed with error");
             exit(EXIT_FAILURE);
         }
-        printf("INFO: %s", operations[generic_messages.my_msg_type]);
+        printf("INFO: %s\n", operations[generic_messages.my_msg_type]);
 
         switch (generic_messages.my_msg_type) {
+        case LIST:
+            iter = hashmap_iter(&family_tree);
+            person_message.my_msg_type = LIST;
+            while(iter){
+                person *choveche = people_hashmap_iter_get_data(iter);
+                person_message.person = *choveche;
+                if (msgsnd(msgid,&person_message, sizeof(person_msg),0) == -1) {
+                    printf("INFO: %s\n","Unable to send information back to client(aka. Eba sa u gyzo)");
+                    break;
+                }
+                iter = hashmap_iter_next(&family_tree, iter);
+
+                /* Override memmory of insert_person in order not to messup on next query */
+                memset(person_message.person.name,0,sizeof(person_message.person.name));
+                memset(person_message.person.date_of_birth,0,sizeof(person_message.person.date_of_birth));
+                memset(person_message.person.parent_PIN[1],0, sizeof(person_message.person.parent_PIN[1]));
+                memset(person_message.person.parent_PIN[0],0, sizeof(person_message.person.parent_PIN[0]));
+                memset(person_message.person.pin,0, sizeof(person_message.person.pin));
+            }
+
+            person_message.my_msg_type = ITERATE_END;
+            if (msgsnd(msgid,&person_message, sizeof(short)*2,0) == -1) {
+                printf("INFO: %s\n","Unable to send information back to client(aka. Eba sa u gyzo)");
+                break;
+            }
+            break;
         case INSERT_PERSON:
             /* Read send from client message */
-            if (msgrcv(msgid, &insert_person_message, sizeof(insert_person_msg),
+            if (msgrcv(msgid, &person_message, sizeof(person_msg),
                        msg_to_recieve, 0) == -1) {
                 perror("msgcrv failed with error");
                 exit(EXIT_FAILURE);
             }
 
-            give_birth(&insert_person_message.person);
+            give_birth(&person_message.person);
+
+            printf("INFO: New born child %s", person_message.person.name);
 
             /* Override memmory of insert_person in order not to messup on next query */
-            memset(insert_person_message.person.name,0,sizeof(insert_person_message.person.name));
-            memset(insert_person_message.person.date_of_birth,0,sizeof(insert_person_message.person.date_of_birth));
-            memset(insert_person_message.person.parent_PIN[1],0, sizeof(insert_person_message.person.parent_PIN[1]));
-            memset(insert_person_message.person.parent_PIN[0],0, sizeof(insert_person_message.person.parent_PIN[0]));
-            memset(insert_person_message.person.pin,0, sizeof(insert_person_message.person.pin));
+            memset(person_message.person.name,0,sizeof(person_message.person.name));
+            memset(person_message.person.date_of_birth,0,sizeof(person_message.person.date_of_birth));
+            memset(person_message.person.parent_PIN[1],0, sizeof(person_message.person.parent_PIN[1]));
+            memset(person_message.person.parent_PIN[0],0, sizeof(person_message.person.parent_PIN[0]));
+            memset(person_message.person.pin,0, sizeof(person_message.person.pin));
 
 
             break;
@@ -130,9 +141,12 @@ int main(void)
 
 void kill_person(const char *key){
     person* p = people_hashmap_get(&family_tree,key);
-    if(p){
-        people_hashmap_remove(&family_tree,key);
-        free(p);
+    if(p!= NULL){
+        if(!p->killed){
+            p->killed = 1;
+
+            fprintf(stderr,"INFO: Person with name %s is death", p->name);
+        }
     }
 }
 
@@ -165,6 +179,14 @@ void intializeTree(){
     person* p;
     for(i=0;i<10;i++){
         p = (person*) malloc(sizeof(person));
+
+        /* Delete all unnecessary characters */
+        memset(p.name,0,sizeof(p.name));
+        memset(p.date_of_birth,0,sizeof(p.date_of_birth));
+        memset(p.parent_PIN[1],0, sizeof(p.parent_PIN[1]));
+        memset(p.parent_PIN[0],0, sizeof(p.parent_PIN[0]));
+        memset(p.pin,0, sizeof(p.pin));
+
         strcpy(p->name, ime[i]);
         strcpy(p->date_of_birth, date_of_birth[i%5]);
         p->killed = 0;
@@ -186,14 +208,5 @@ void intializeTree(){
             printf("INFO: inserted %s\n",p->pin);
         }
     }
-//    struct hashmap_iter *iter;
-//    iter = hashmap_iter(&family_tree);
-//    while(iter){
-//        person *pesho = people_hashmap_iter_get_data(iter);
-//        const char *kluch = people_hashmap_iter_get_key(iter);
-//        iter = hashmap_iter_next(&family_tree, iter);
-//    }
 
-//    person* pesho = people_hashmap_get(&family_tree,parent_PIN_1[1]);
-//    printf("%s\n", pesho->name);
 }

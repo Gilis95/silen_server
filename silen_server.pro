@@ -8,4 +8,5 @@ SOURCES += src/main.c \
 
 HEADERS += \
     src/headers/hashmap.h \
-    src/headers/person.h
+    src/headers/person.h \
+    src/headers/communication_header.h
