@@ -59,7 +59,7 @@ int main(void)
             perror("msgcrv failed with error");
             exit(EXIT_FAILURE);
         }
-//        printf("INFO: %s\n", operations[generic_messages.my_msg_type]);
+        //        printf("INFO: %s\n", operations[generic_messages.my_msg_type]);
 
         switch (generic_messages.my_msg_type) {
         case LIST:
@@ -98,8 +98,6 @@ int main(void)
             }
 
             give_birth(&person_message.person);
-
-            printf("INFO: New born child %s", person_message.person.name);
 
             /* Override memmory of insert_person in order not to messup on next query */
             memset(person_message.person.name,0,sizeof(person_message.person.name));
@@ -145,15 +143,20 @@ void kill_person(const char *key){
     if(p!= NULL){
         if(!p->killed){
             p->killed = 1;
-
             fprintf(stderr,"INFO: Person with name %s is dead\n", p->name);
         }
     }
 }
 
-void give_birth(person *person){
-    people_hashmap_put(&family_tree,person->pin,person);
-    printf("INFO: Person with name %s has been born.", person->name);
+void give_birth(person *p){
+    person *choveche = (person *) malloc(sizeof(person));
+    *choveche = *p;
+    if(people_hashmap_put(&family_tree,choveche->pin,choveche) !=choveche){
+        printf("WARNING: Such person already exist.\n");
+        free(choveche);
+    } else {
+        printf("INFO: Person with name %s has been born.\n", choveche->name);
+    }
 }
 
 void intializeTree(){
